@@ -235,3 +235,24 @@ button:disabled { cursor: not-allowed; }
 .admin-link { display: block; width: max-content; margin: 8px auto 0; color: var(--wool); opacity: .55; font-size: 14px; text-decoration: none; padding: 8px; }
 .admin-link:hover, .admin-link:focus-visible { opacity: 1; text-decoration: underline; }
 .notice-inline { background: rgba(224,164,58,.16); border-inline-start: 4px solid var(--saffron); border-radius: 10px; padding: 12px 14px; margin: 0 0 16px; font-size: 15px; }
+
+/* أسهم تعديل النتيجة */
+.score-adj { display: inline-flex; align-items: center; gap: 6px; }
+.adj {
+  width: 36px; height: 36px; flex: none; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(234,219,190,.12); color: var(--wool);
+}
+.adj svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.adj:hover { background: rgba(234,219,190,.22); }
+.adj:active { transform: scale(.92); }
+.score-adj .score { min-width: 2.2ch; text-align: center; }
+@media (max-width: 520px) { .adj { width: 32px; height: 32px; } }
+@media (max-width: 520px) {
+  .team-panel { padding: 10px; min-width: 0; }
+  .team-panel .row { flex-wrap: wrap; justify-content: center; }
+  .team-panel .tname { width: 100%; text-align: center; }
+  .team-panel .score { font-size: 28px; }
+  .scorebar { gap: 8px; }
+  .helpers { justify-content: center; }
+}

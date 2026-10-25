@@ -8,6 +8,7 @@
   const TEAM_COLORS = ["var(--saffron)", "var(--palm)"];
   const LEVELS = [200, 400, 600];
   const DEFAULT_SETTINGS = { questionTime: 60, callBonus: 30, points: [200, 400, 600], categoriesPerTeam: 3, helpers: { double: true, call: true, swap: true } };
+  const SCORE_STEP = 100; // مقدار الزيادة أو النقص بالأسهم
   const HELPERS = {
     double: { label: "دبل", hint: () => "نقاط السؤال ضعفين إذا جاوبتوا صح" },
     call: { label: "اتصال", hint: () => ar(S().callBonus) + " ثانية زيادة وتقدرون تتصلون بأحد" },
@@ -280,7 +281,12 @@
           const t = state.teams[i];
           const panel = `
             <div class="team-panel ${state.turn === i ? "active" : ""}" style="--team:${TEAM_COLORS[i]}">
-              <div class="row"><span class="tname">${esc(t.name)}</span><span class="score">${ar(t.score)}</span></div>
+              <div class="row"><span class="tname">${esc(t.name)}</span>
+                <span class="score-adj">
+                  <button class="adj" data-adj="${i}" data-dir="1" aria-label="زِد نقاط ${esc(t.name)} ${ar(SCORE_STEP)}" title="زِد ${ar(SCORE_STEP)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+                  <span class="score" aria-live="polite">${ar(t.score)}</span>
+                  <button class="adj" data-adj="${i}" data-dir="-1" aria-label="نقّص نقاط ${esc(t.name)} ${ar(SCORE_STEP)}" title="نقّص ${ar(SCORE_STEP)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+                </span></div>
               <div class="helpers">${helpersOn().map((k) => `<span class="helper ${t.helpers[k] ? "" : "used"}" title="${HELPERS[k].hint()}">${HELPERS[k].label}</span>`).join("")}</div>
             </div>`;
           return i === 0 ? panel + `<div class="center-turn">الدور على<strong>${esc(state.teams[state.turn].name)}</strong></div>` : panel;
@@ -319,6 +325,14 @@
 
     app.querySelectorAll(".tile:not(.done)").forEach((b) =>
       b.addEventListener("click", () => openQuestion(+b.dataset.ci, +b.dataset.ti)));
+    app.querySelectorAll("[data-adj]").forEach((b) => b.addEventListener("click", () => {
+      const t = state.teams[+b.dataset.adj];
+      t.score += SCORE_STEP * +b.dataset.dir;
+      beep(+b.dataset.dir > 0 ? 820 : 360, 0.06);
+      save();
+      const el = b.parentElement.querySelector(".score");
+      el.textContent = ar(t.score);
+    }));
     document.getElementById("switch").onclick = () => { state.turn = 1 - state.turn; save(); renderBoard(); };
     document.getElementById("finish").onclick = () => { if (confirm("تبون تنهون اللعبة الحين؟")) go("end"); };
     document.getElementById("home").onclick = () => { save(); state.screen = "home"; render(); };
