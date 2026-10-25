@@ -1,0 +1,233 @@
+/* سين قاف — هوية مستوحاة من نسيج السدو الكويتي */
+:root {
+  --madder: #7B1E24;      /* أحمر السدو */
+  --madder-deep: #5E151B;
+  --hair: #2A211E;        /* شعر الماعز */
+  --wool: #EADBBE;        /* صوف */
+  --wool-dim: #D6C39E;
+  --saffron: #E0A43A;     /* الفريق الأول */
+  --palm: #6DBF94;        /* الفريق الثاني */
+  --ink: #2A211E;
+  --radius-tile: 6px;
+  --radius-card: 14px;
+  --sadu: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='32'%3E%3Crect width='48' height='32' fill='%232A211E'/%3E%3Cpath d='M0 32 L12 20 L24 32 L36 20 L48 32 Z' fill='%237B1E24'/%3E%3Cpath d='M0 0 L12 12 L24 0 L36 12 L48 0 Z' fill='%237B1E24'/%3E%3Cpath d='M24 10 L30 16 L24 22 L18 16 Z' fill='%23EADBBE'/%3E%3Cpath d='M0 10 L6 16 L0 22 Z M48 10 L42 16 L48 22 Z' fill='%23EADBBE'/%3E%3Crect x='23' y='15' width='2' height='2' fill='%23E0A43A'/%3E%3C/svg%3E");
+  --sadu-thin: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10'%3E%3Crect width='16' height='10' fill='%232A211E'/%3E%3Cpath d='M0 10 L8 2 L16 10 Z' fill='%23EADBBE'/%3E%3C/svg%3E");
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100dvh;
+  background: var(--madder);
+  background-image: radial-gradient(circle at 50% -20%, #8E2A2F 0%, var(--madder) 45%, var(--madder-deep) 100%);
+  background-attachment: fixed;
+  color: var(--wool);
+  font-family: "Readex Pro", system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.band { height: 32px; background: var(--sadu); background-size: 48px 32px; }
+
+main { padding: 24px 16px 48px; max-width: 1400px; margin: 0 auto; outline: none; }
+
+h1, h2, h3, .kufi { font-family: "Reem Kufi", "Readex Pro", sans-serif; font-weight: 700; margin: 0; line-height: 1.2; }
+
+button { font: inherit; cursor: pointer; border: 0; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--saffron); outline-offset: 3px; }
+button:disabled { cursor: not-allowed; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 52px; padding: 0 28px; border-radius: 999px;
+  background: var(--wool); color: var(--hair);
+  font-weight: 600; font-size: 18px;
+  box-shadow: 0 4px 0 var(--wool-dim);
+  transition: transform .08s ease, box-shadow .08s ease;
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--wool-dim); }
+.btn:disabled { opacity: .45; }
+.btn.ghost { background: transparent; color: var(--wool); box-shadow: inset 0 0 0 2px rgba(234,219,190,.45); }
+.btn.ghost:active { transform: none; }
+.btn.small { min-height: 40px; padding: 0 16px; font-size: 15px; }
+
+/* ===== الشاشة الأولى ===== */
+.home { display: grid; place-items: center; min-height: calc(100dvh - 140px); text-align: center; }
+.home-inner { width: 100%; max-width: 560px; }
+.logo {
+  font-family: "Reem Kufi", sans-serif; font-weight: 700;
+  font-size: clamp(72px, 20vw, 168px); line-height: 1; letter-spacing: 0;
+  color: var(--wool);
+  text-shadow: 0 6px 0 var(--hair);
+  margin: 8px 0 4px;
+}
+.logo-weave { height: 14px; width: 64%; margin: 18px auto 20px; background: var(--sadu-thin); background-size: 16px 10px; border-radius: 2px; }
+.tagline { margin: 0 0 32px; opacity: .85; }
+
+.teams-form { display: grid; gap: 14px; margin-bottom: 28px; }
+.team-field { display: flex; align-items: center; gap: 12px; background: rgba(42,33,30,.35); border-radius: var(--radius-card); padding: 10px 14px; }
+.team-field .swatch { width: 18px; height: 18px; border-radius: 50%; flex: none; }
+.team-field input {
+  flex: 1; min-width: 0; background: transparent; border: 0; color: var(--wool);
+  font: inherit; font-size: 20px; font-weight: 500; padding: 6px 0;
+}
+.team-field input::placeholder { color: rgba(234,219,190,.5); }
+.resume-note { margin-top: 16px; font-size: 15px; opacity: .8; }
+.resume-note button { background: none; text-decoration: underline; padding: 4px; font-size: 15px; }
+
+/* ===== اختيار الفئات ===== */
+.screen-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; margin-bottom: 22px; }
+.screen-head h2 { font-size: clamp(28px, 5vw, 44px); }
+.turn-pill { display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 999px; background: var(--hair); font-weight: 600; }
+.turn-pill .dot { width: 12px; height: 12px; border-radius: 50%; }
+
+.cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (min-width: 640px) { .cat-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1000px) { .cat-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.cat-card {
+  position: relative; min-height: 112px; padding: 18px 16px 22px;
+  border-radius: var(--radius-card);
+  background: var(--wool); color: var(--hair);
+  text-align: right; display: flex; flex-direction: column; justify-content: space-between;
+  box-shadow: 0 5px 0 var(--wool-dim);
+  overflow: hidden;
+}
+.cat-card::after { content: ""; position: absolute; inset: auto 0 0 0; height: 10px; background: var(--sadu-thin); background-size: 16px 10px; }
+.cat-card .name { font-family: "Reem Kufi", sans-serif; font-size: 24px; font-weight: 700; }
+.cat-card .count { font-size: 14px; opacity: .65; }
+.cat-card[aria-pressed="true"] { color: var(--wool); box-shadow: none; transform: translateY(4px); }
+.cat-card[aria-pressed="true"] .count { opacity: .9; }
+.cat-card:disabled:not([aria-pressed="true"]) { opacity: .4; }
+
+.pick-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; justify-content: center; }
+
+/* ===== لوحة اللعب ===== */
+.scorebar {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; gap: 10px;
+  margin-bottom: 18px;
+}
+.team-panel {
+  border-radius: var(--radius-card); padding: 12px 14px;
+  background: rgba(42,33,30,.45);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow .2s ease;
+}
+.team-panel.active { box-shadow: inset 0 0 0 3px var(--team); }
+.team-panel .row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.team-panel .tname { font-weight: 600; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team-panel .score { font-family: "Reem Kufi", sans-serif; font-weight: 700; font-size: clamp(30px, 6vw, 52px); line-height: 1; color: var(--team); font-variant-numeric: tabular-nums; }
+.helpers { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.helper {
+  font-size: 13px; padding: 5px 10px; border-radius: 999px;
+  background: rgba(234,219,190,.12); color: var(--wool);
+}
+.helper.used { text-decoration: line-through; opacity: .4; }
+.center-turn { display: grid; place-items: center; text-align: center; padding: 0 4px; font-size: 13px; opacity: .85; min-width: 64px; }
+.center-turn strong { display: block; font-family: "Reem Kufi", sans-serif; font-size: 18px; opacity: 1; }
+
+.board { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+@media (min-width: 720px) { .board { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1180px) { .board { grid-template-columns: repeat(6, 1fr); } }
+
+.col { background: var(--hair); border-radius: var(--radius-card); padding: 0 0 10px; overflow: hidden; }
+.col h3 {
+  font-size: 19px; text-align: center; padding: 14px 8px 12px;
+  color: var(--wool); border-bottom: 6px solid transparent;
+  border-image: var(--sadu-thin) 0 0 10 0 / 0 0 6px 0 repeat;
+}
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 10px 0; }
+.tile {
+  min-height: clamp(58px, 10vh, 120px); border-radius: var(--radius-tile);
+  background: var(--wool); color: var(--madder);
+  font-family: "Reem Kufi", sans-serif; font-weight: 700; font-size: clamp(20px, 3.2vw, 28px);
+  box-shadow: 0 4px 0 var(--wool-dim);
+  font-variant-numeric: tabular-nums;
+}
+.tile:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--wool-dim); }
+.tile.done { background: transparent; color: rgba(234,219,190,.28); box-shadow: inset 0 0 0 2px rgba(234,219,190,.12); font-size: 16px; }
+.tile.done.won { color: var(--team); box-shadow: inset 0 0 0 2px var(--team); }
+
+.board-foot { display: flex; justify-content: center; gap: 12px; margin-top: 26px; flex-wrap: wrap; }
+
+/* ===== السؤال ===== */
+.overlay {
+  position: fixed; inset: 0; z-index: 10;
+  background: rgba(30, 10, 12, .82);
+  display: grid; place-items: center; padding: 16px;
+  overflow-y: auto;
+}
+.qcard {
+  width: 100%; max-width: 980px;
+  background: var(--wool); color: var(--hair);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,.45);
+  animation: rise .28s ease-out;
+}
+@keyframes rise { from { transform: translateY(16px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+.qcard .weave { height: 24px; background: var(--sadu); background-size: 36px 24px; }
+.qbody { padding: 22px clamp(18px, 4vw, 48px) 28px; }
+.qmeta { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-weight: 600; }
+.qmeta .points { font-family: "Reem Kufi", sans-serif; font-size: 28px; color: var(--madder); }
+.qmeta .points.double::after { content: " ×٢"; color: var(--saffron); }
+.qtext {
+  font-family: "Reem Kufi", sans-serif; font-weight: 700;
+  font-size: clamp(26px, 4.6vw, 48px); line-height: 1.45;
+  margin: 26px 0 22px; text-wrap: balance;
+}
+
+.timer { position: relative; height: 12px; background: rgba(42,33,30,.12); border-radius: 999px; overflow: hidden; }
+.timer > i { position: absolute; inset: 0 0 0 auto; width: 100%; background: var(--hair); border-radius: 999px; transition: width 1s linear; }
+.timer.low > i { background: var(--madder); }
+.timer-row { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+.timer-row .secs { font-family: "Reem Kufi", sans-serif; font-weight: 700; font-size: 26px; min-width: 2.4em; text-align: center; font-variant-numeric: tabular-nums; }
+.timer-row .timer { flex: 1; }
+
+.answer {
+  background: var(--hair); color: var(--wool);
+  border-radius: 10px; padding: 18px 20px; margin-bottom: 22px;
+  font-size: clamp(20px, 3vw, 30px); font-weight: 600;
+  animation: rise .22s ease-out;
+}
+.answer small { display: block; font-size: 14px; font-weight: 400; opacity: .7; margin-bottom: 4px; }
+
+.qactions { display: flex; flex-wrap: wrap; gap: 10px; }
+.qactions .spacer { flex: 1; }
+.qcard .btn { background: var(--hair); color: var(--wool); box-shadow: 0 4px 0 #120d0c; }
+.qcard .btn.ghost { background: transparent; color: var(--hair); box-shadow: inset 0 0 0 2px rgba(42,33,30,.35); }
+.qcard .btn.team { background: var(--team); color: var(--hair); box-shadow: 0 4px 0 rgba(0,0,0,.3); }
+.qcard .btn.helper-btn { min-height: 44px; padding: 0 16px; font-size: 15px; background: transparent; color: var(--hair); box-shadow: inset 0 0 0 2px var(--team); }
+.qcard .btn.helper-btn:disabled { opacity: .3; box-shadow: inset 0 0 0 2px rgba(42,33,30,.3); }
+.who { font-size: 15px; margin: 0 0 10px; opacity: .75; }
+
+/* ===== النهاية ===== */
+.finale { text-align: center; padding-top: 4vh; }
+.finale .crown { width: min(420px, 70%); height: 24px; margin: 0 auto 28px; background: var(--sadu); background-size: 36px 24px; border-radius: 3px; }
+.finale h2 { font-size: clamp(40px, 9vw, 96px); color: var(--wool); }
+.finale .winner-name { color: var(--team); }
+.final-scores { display: flex; justify-content: center; gap: 16px; margin: 26px 0 34px; flex-wrap: wrap; }
+.final-scores div { background: rgba(42,33,30,.45); padding: 14px 24px; border-radius: var(--radius-card); min-width: 160px; }
+.final-scores b { display: block; font-family: "Reem Kufi", sans-serif; font-size: 40px; color: var(--team); }
+
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--hair); color: var(--wool); padding: 12px 20px; border-radius: 999px;
+  z-index: 20; font-size: 15px; max-width: calc(100% - 32px); text-align: center;
+}
+
+.loading { display: grid; place-items: center; min-height: 50vh; font-family: "Reem Kufi", sans-serif; font-size: 24px; }
+
+@media (max-width: 520px) {
+  body { font-size: 16px; }
+  .scorebar { grid-template-columns: 1fr 1fr; }
+  .center-turn { grid-column: 1 / -1; grid-row: 1; padding: 0; }
+  .center-turn strong { display: inline; margin-inline-start: 6px; }
+  .qactions .btn { flex: 1 1 auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

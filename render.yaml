@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: seen-qaf-api
+    runtime: node
+    plan: free
+    buildCommand: echo ok
+    startCommand: node backend/server.js
+    healthCheckPath: /api/health
+
+  - type: web
+    name: seen-qaf
+    runtime: static
+    buildCommand: echo ok
+    staticPublishPath: frontend
