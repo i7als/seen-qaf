@@ -7,12 +7,11 @@
   const HISTORY_KEY = "seenqaf.history.v1";
   const TEAM_COLORS = ["var(--saffron)", "var(--palm)"];
   const LEVELS = [200, 400, 600];
-  const QUESTION_TIME = 60;
-  const CALL_BONUS = 30;
+  const DEFAULT_SETTINGS = { questionTime: 60, callBonus: 30, points: [200, 400, 600], categoriesPerTeam: 3, helpers: { double: true, call: true, swap: true } };
   const HELPERS = {
-    double: { label: "دبل", hint: "نقاط السؤال ضعفين إذا جاوبتوا صح" },
-    call: { label: "اتصال", hint: "٣٠ ثانية زيادة وتقدرون تتصلون بأحد" },
-    swap: { label: "تبديل", hint: "بدّل السؤال بسؤال ثاني بنفس النقاط" },
+    double: { label: "دبل", hint: () => "نقاط السؤال ضعفين إذا جاوبتوا صح" },
+    call: { label: "اتصال", hint: () => ar(S().callBonus) + " ثانية زيادة وتقدرون تتصلون بأحد" },
+    swap: { label: "تبديل", hint: () => "بدّل السؤال بسؤال ثاني بنفس النقاط" },
   };
 
   const app = document.getElementById("app");
@@ -22,6 +21,12 @@
 
   let state = load() || freshState();
   let categories = []; // [{id, name, count}]
+  let settings = DEFAULT_SETTINGS;
+  // إعدادات اللعبة الحالية (تنحفظ مع اللعبة) أو آخر إعدادات من السيرفر
+  const S = () => ({ ...DEFAULT_SETTINGS, ...(state.settings || settings) });
+  const pts = (level) => S().points[LEVELS.indexOf(level)] ?? level;
+  const helpersOn = () => Object.keys(HELPERS).filter((k) => S().helpers?.[k] !== false);
+  const pickOrder = () => Array.from({ length: S().categoriesPerTeam * 2 }, (_, i) => i % 2);
   let localBank = null;
   let timer = null;
 
@@ -79,14 +84,21 @@
     return localBank;
   }
 
+  const playable = (c) => c.enabled !== false && LEVELS.every((l) => c.questions.filter((q) => q.level === l).length >= 2);
+
   async function loadCategories() {
     if (categories.length) return categories;
     try {
       if (!API) throw 0;
-      categories = await fetchJson(API + "/api/categories", {}, 6000);
+      const [cats, st] = await Promise.all([
+        fetchJson(API + "/api/categories", {}, 6000),
+        fetchJson(API + "/api/settings", {}, 6000),
+      ]);
+      categories = cats; settings = { ...DEFAULT_SETTINGS, ...st };
     } catch {
       const bank = await getLocalBank();
-      categories = bank.categories.map((c) => ({ id: c.id, name: c.name, count: c.questions.length }));
+      categories = bank.categories.filter(playable).map((c) => ({ id: c.id, name: c.name, count: c.questions.length }));
+      settings = { ...DEFAULT_SETTINGS, ...(bank.settings || {}) };
     }
     return categories;
   }
@@ -122,6 +134,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ categories: ids, exclude }),
       }, 8000);
+      if (res.settings) settings = { ...DEFAULT_SETTINGS, ...res.settings };
       return res.board;
     } catch {
       return buildLocalGame(await getLocalBank(), ids, exclude);
@@ -180,7 +193,8 @@
           </form>
           ${canResume ? `<p class="resume-note">عندكم لعبة ما خلصت بين ${esc(saved.teams[0].name)} و${esc(saved.teams[1].name)}. <button id="resume" type="button">كمّلوها</button></p>` : ""}
         </div>
-      </section>`;
+      </section>
+      <a class="admin-link" href="admin.html">لوحة التحكم</a>`;
 
     document.getElementById("teams").addEventListener("submit", (e) => {
       e.preventDefault();
@@ -199,17 +213,21 @@
   async function renderPick() {
     app.innerHTML = `<div class="loading">نجهز الفئات…</div>`;
     const cats = await loadCategories();
-    const order = [0, 1, 0, 1, 0, 1];
-    const picking = state.picks.length < 6 ? order[state.picks.length] : null;
+    state.settings = null; // قبل البدء نستخدم آخر إعدادات من السيرفر
+    const order = pickOrder();
+    const need = order.length;
+    if (state.picks.length > need) state.picks = state.picks.slice(0, need);
+    const picking = state.picks.length < need ? order[state.picks.length] : null;
     const team = picking !== null ? state.teams[picking] : null;
 
     app.innerHTML = `
       <section>
         <div class="screen-head">
           <h2>اختاروا الفئات</h2>
-          ${team ? `<span class="turn-pill"><span class="dot" style="background:${TEAM_COLORS[picking]}"></span>دور ${esc(team.name)} يختار (${ar(state.picks.filter((p) => p.team === picking).length + 1)} من ${ar(3)})</span>`
+          ${team ? `<span class="turn-pill"><span class="dot" style="background:${TEAM_COLORS[picking]}"></span>دور ${esc(team.name)} يختار (${ar(state.picks.filter((p) => p.team === picking).length + 1)} من ${ar(S().categoriesPerTeam)})</span>`
                  : `<span class="turn-pill">الفئات جاهزة</span>`}
         </div>
+        ${cats.length < need ? `<p class="notice-inline">اللعبة تحتاج ${ar(need)} فئات جاهزة، والموجود ${ar(cats.length)}. أضف فئات من لوحة التحكم.</p>` : ""}
         <div class="cat-grid">
           ${cats.map((c) => {
             const p = state.picks.find((x) => x.id === c.id);
@@ -223,7 +241,7 @@
         <div class="pick-actions">
           <button class="btn ghost" id="undo" ${state.picks.length ? "" : "disabled"}>تراجع</button>
           <button class="btn ghost" id="random" ${picking === null ? "disabled" : ""}>كمّلها عشوائي</button>
-          <button class="btn" id="start" ${state.picks.length === 6 ? "" : "disabled"}>ابدأ اللعب</button>
+          <button class="btn" id="start" ${state.picks.length === need ? "" : "disabled"}>ابدأ اللعب</button>
         </div>
       </section>`;
 
@@ -234,7 +252,7 @@
     document.getElementById("undo").onclick = () => { state.picks.pop(); save(); renderPick(); };
     document.getElementById("random").onclick = () => {
       const left = shuffle(cats.filter((c) => !state.picks.some((p) => p.id === c.id)));
-      while (state.picks.length < 6) state.picks.push({ id: left.shift().id, team: order[state.picks.length] });
+      while (state.picks.length < need && left.length) state.picks.push({ id: left.shift().id, team: order[state.picks.length] });
       save(); renderPick();
     };
     document.getElementById("start").onclick = async (e) => {
@@ -246,6 +264,8 @@
         return toast("ما قدرنا نحمّل الأسئلة. تأكدوا من الإنترنت وجربوا مرة ثانية.");
       }
       state.results = {};
+      state.settings = { ...settings };
+      state.teams.forEach((t) => { t.helpers = Object.fromEntries(Object.keys(HELPERS).map((k) => [k, helpersOn().includes(k)])); });
       addHistory(state.board.flatMap((c) => c.tiles.map((q) => q.id)));
       go("board");
     };
@@ -261,7 +281,7 @@
           const panel = `
             <div class="team-panel ${state.turn === i ? "active" : ""}" style="--team:${TEAM_COLORS[i]}">
               <div class="row"><span class="tname">${esc(t.name)}</span><span class="score">${ar(t.score)}</span></div>
-              <div class="helpers">${Object.entries(HELPERS).map(([k, h]) => `<span class="helper ${t.helpers[k] ? "" : "used"}" title="${h.hint}">${h.label}</span>`).join("")}</div>
+              <div class="helpers">${helpersOn().map((k) => `<span class="helper ${t.helpers[k] ? "" : "used"}" title="${HELPERS[k].hint()}">${HELPERS[k].label}</span>`).join("")}</div>
             </div>`;
           return i === 0 ? panel + `<div class="center-turn">الدور على<strong>${esc(state.teams[state.turn].name)}</strong></div>` : panel;
         }).join("")}
@@ -283,7 +303,7 @@
               <div class="tiles">
                 ${cat.tiles.map((q, ti) => {
                   const r = state.results[tileKey(ci, ti)];
-                  if (r === undefined) return `<button class="tile" data-ci="${ci}" data-ti="${ti}" aria-label="${esc(cat.name)} بـ ${ar(q.level)} نقطة">${ar(q.level)}</button>`;
+                  if (r === undefined) return `<button class="tile" data-ci="${ci}" data-ti="${ti}" aria-label="${esc(cat.name)} بـ ${ar(pts(q.level))} نقطة">${ar(pts(q.level))}</button>`;
                   const label = r === -1 ? "محد" : esc(state.teams[r].name);
                   return `<button class="tile done ${r >= 0 ? "won" : ""}" style="--team:${r >= 0 ? TEAM_COLORS[r] : "transparent"}" disabled aria-label="انلعب">${label}</button>`;
                 }).join("")}
@@ -307,7 +327,7 @@
   // ---------- السؤال ----------
   function openQuestion(ci, ti) {
     const cat = state.board[ci];
-    state.current = { ci, ti, q: cat.tiles[ti], double: false, revealed: false, left: QUESTION_TIME, total: QUESTION_TIME, called: false };
+    state.current = { ci, ti, q: cat.tiles[ti], double: false, revealed: false, left: S().questionTime, total: S().questionTime, called: false };
     beep(440, 0.12);
     renderQuestion();
     startTimer();
@@ -325,7 +345,7 @@
         <article class="qcard" style="--team:${color}">
           <div class="weave" aria-hidden="true"></div>
           <div class="qbody">
-            <div class="qmeta"><span>${esc(cat.name)}</span><span class="points ${c.double ? "double" : ""}">${ar(c.q.level)}</span></div>
+            <div class="qmeta"><span>${esc(cat.name)}</span><span class="points ${c.double ? "double" : ""}">${ar(pts(c.q.level))}</span></div>
             <p class="qtext" id="qtext">${esc(c.q.q)}</p>
 
             ${c.revealed ? `
@@ -339,11 +359,11 @@
                 <span class="secs" id="secs">${ar(c.left)}</span>
                 <div class="timer ${c.left <= 10 ? "low" : ""}" id="bar"><i style="width:${pct}%"></i></div>
               </div>
-              <p class="who">دور ${esc(t.name)} · وسائل المساعدة</p>
+              ${helpersOn().length ? `<p class="who">دور ${esc(t.name)} · وسائل المساعدة</p>` : `<p class="who">دور ${esc(t.name)}</p>`}
               <div class="qactions">
-                ${Object.entries(HELPERS).map(([k, h]) => {
+                ${helpersOn().map((k) => {
                   const off = !t.helpers[k] || (k === "swap" && !cat.spares[c.q.level]);
-                  return `<button class="btn helper-btn" data-help="${k}" title="${h.hint}" ${off ? "disabled" : ""}>${h.label}</button>`;
+                  return `<button class="btn helper-btn" data-help="${k}" title="${HELPERS[k].hint()}" ${off ? "disabled" : ""}>${HELPERS[k].label}</button>`;
                 }).join("")}
                 <span class="spacer"></span>
                 <button class="btn" id="reveal">أظهر الجواب</button>
@@ -368,12 +388,12 @@
     if (!t.helpers[kind]) return;
     t.helpers[kind] = false;
     if (kind === "double") { c.double = true; toast("دبل! النقاط ضعفين لـ " + t.name); }
-    if (kind === "call") { c.left += CALL_BONUS; c.total += CALL_BONUS; toast("٣٠ ثانية زيادة، اتصلوا بسرعة"); }
+    if (kind === "call") { c.left += S().callBonus; c.total += S().callBonus; toast(ar(S().callBonus) + " ثانية زيادة، اتصلوا بسرعة"); }
     if (kind === "swap") {
       const spare = cat.spares[c.q.level];
       cat.spares[c.q.level] = null;
       cat.tiles[c.ti] = spare;
-      c.q = spare; c.left = QUESTION_TIME; c.total = QUESTION_TIME;
+      c.q = spare; c.left = S().questionTime; c.total = S().questionTime;
       addHistory([spare.id]);
       toast("تبدّل السؤال");
     }
@@ -400,8 +420,7 @@
   function award(winner) {
     const c = state.current;
     if (winner >= 0) {
-      const pts = c.q.level * (c.double && winner === state.turn ? 2 : 1);
-      state.teams[winner].score += pts;
+      state.teams[winner].score += pts(c.q.level) * (c.double && winner === state.turn ? 2 : 1);
       beep(winner === state.turn ? 990 : 700, 0.25);
     }
     state.results[tileKey(c.ci, c.ti)] = winner;

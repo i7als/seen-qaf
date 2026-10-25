@@ -1,9 +1,25 @@
 {
- "version": 1,
+ "version": 2,
+ "settings": {
+  "questionTime": 60,
+  "callBonus": 30,
+  "points": [
+   200,
+   400,
+   600
+  ],
+  "categoriesPerTeam": 3,
+  "helpers": {
+   "double": true,
+   "call": true,
+   "swap": true
+  }
+ },
  "categories": [
   {
    "id": "kuwait",
    "name": "الكويت",
+   "enabled": true,
    "questions": [
     {
      "id": "kuwait-200-1",
@@ -82,6 +98,7 @@
   {
    "id": "geo",
    "name": "جغرافيا",
+   "enabled": true,
    "questions": [
     {
      "id": "geo-200-1",
@@ -160,6 +177,7 @@
   {
    "id": "history",
    "name": "تاريخ",
+   "enabled": true,
    "questions": [
     {
      "id": "history-200-1",
@@ -238,6 +256,7 @@
   {
    "id": "sports",
    "name": "رياضة",
+   "enabled": true,
    "questions": [
     {
      "id": "sports-200-1",
@@ -316,6 +335,7 @@
   {
    "id": "science",
    "name": "علوم",
+   "enabled": true,
    "questions": [
     {
      "id": "science-200-1",
@@ -394,6 +414,7 @@
   {
    "id": "islam",
    "name": "إسلاميات",
+   "enabled": true,
    "questions": [
     {
      "id": "islam-200-1",
@@ -472,6 +493,7 @@
   {
    "id": "food",
    "name": "أكلات",
+   "enabled": true,
    "questions": [
     {
      "id": "food-200-1",
@@ -550,6 +572,7 @@
   {
    "id": "animals",
    "name": "حيوانات",
+   "enabled": true,
    "questions": [
     {
      "id": "animals-200-1",
@@ -628,6 +651,7 @@
   {
    "id": "arabic",
    "name": "لغة وأمثال",
+   "enabled": true,
    "questions": [
     {
      "id": "arabic-200-1",
@@ -706,6 +730,7 @@
   {
    "id": "riddles",
    "name": "ألغاز",
+   "enabled": true,
    "questions": [
     {
      "id": "riddles-200-1",
@@ -784,6 +809,7 @@
   {
    "id": "tech",
    "name": "تقنية واختراعات",
+   "enabled": true,
    "questions": [
     {
      "id": "tech-200-1",
@@ -862,6 +888,7 @@
   {
    "id": "numbers",
    "name": "أرقام",
+   "enabled": true,
    "questions": [
     {
      "id": "numbers-200-1",

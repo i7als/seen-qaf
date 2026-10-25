@@ -231,3 +231,7 @@ button:disabled { cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+.admin-link { display: block; width: max-content; margin: 8px auto 0; color: var(--wool); opacity: .55; font-size: 14px; text-decoration: none; padding: 8px; }
+.admin-link:hover, .admin-link:focus-visible { opacity: 1; text-decoration: underline; }
+.notice-inline { background: rgba(224,164,58,.16); border-inline-start: 4px solid var(--saffron); border-radius: 10px; padding: 12px 14px; margin: 0 0 16px; font-size: 15px; }

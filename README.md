@@ -16,29 +16,48 @@
 
 اللعبة تحفظ نفسها تلقائياً، لو سكرتوا الصفحة تقدرون تكمّلون. وتتذكر الأسئلة اللي انلعبت عشان ما تتكرر بسرعة.
 
+## لوحة التحكم
+افتح `admin.html` في الموقع (فيه رابط «لوحة التحكم» تحت الصفحة الرئيسية) وادخل بكلمة السر.
+
+تقدر منها:
+- تعدّل أي سؤال أو جواب، وتضيف أسئلة وتحذفها لكل مستوى.
+- تضيف فئات جديدة، تغيّر أسماءها، تخفيها أو تحذفها.
+- تغيّر وقت السؤال، ووقت «اتصال»، ونقاط كل مستوى، وعدد الفئات لكل فريق، وتطفي أي وسيلة مساعدة.
+- تنزّل نسخة احتياطية وتسترجعها.
+
+الفئة تطلع في اللعبة إذا كانت مفعّلة وفيها سؤالين على الأقل في كل مستوى (والأفضل ٣ عشان تشتغل «تبديل»).
+
+### الحفظ الدائم
+السيرفر يحفظ التعديلات في ملفات `questions.json` داخل ريبو GitHub نفسه، فما تضيع أبداً، والموقع يتحدث تلقائياً بعد كل حفظ (دقيقة أو دقيقتين).
+
 ## هيكل المشروع
 ```
-frontend/   الواجهة (HTML + CSS + JS بدون مكتبات)  → Render Static Site أو Vercel
-backend/    API الأسئلة (Node بدون مكتبات)          → Render Web Service
-scripts/    بنك الأسئلة ومولّد ملفات JSON
+frontend/   الواجهة ولوحة التحكم (HTML + CSS + JS بدون مكتبات)
+backend/    API الأسئلة ولوحة التحكم (Node بدون مكتبات)
+render.yaml إعداد Render
 ```
 
-## إضافة أو تعديل أسئلة
-1. عدّل `scripts/questions_source.py` (كل فئة ٤ أسئلة لكل مستوى، أو أكثر).
-2. شغّل: `python3 scripts/build_questions.py`
-3. ارفع التعديل على GitHub، والموقع يتحدث تلقائياً.
+## متغيرات البيئة للباك إند (في Render)
+| المتغير | الوصف |
+|---|---|
+| `ADMIN_PASSWORD` | كلمة سر لوحة التحكم |
+| `GITHUB_TOKEN` | توكن GitHub (Fine-grained) على الريبو هذا بصلاحية Contents: Read and write |
+| `GITHUB_REPO` | اسم الريبو مثل `hassan/seen-qaf` |
+| `GITHUB_BRANCH` | اختياري، الافتراضي `main` |
+
+بدون `GITHUB_TOKEN` اللوحة تشتغل، بس التعديلات تضيع إذا انعاد تشغيل السيرفر.
 
 ## التشغيل محلياً
 ```
-node backend/server.js            # API على http://localhost:3001
+ADMIN_PASSWORD=1234 node backend/server.js   # API على http://localhost:3001
 cd frontend && python3 -m http.server 8080
 ```
 وغيّر الرابط في `frontend/config.js` إلى `http://localhost:3001` للتجربة.
 
 ## النشر
-- **الباك إند (Render Web Service)**: Start command `node backend/server.js`، Health check `/api/health`.
+- **الباك إند (Render Web Service)**: Start command `node backend/server.js`، Health check `/api/health`، وأضف متغيرات البيئة فوق.
 - **الواجهة (Render Static Site)**: Publish directory `frontend`، Build command `echo ok`.
 - **أو الواجهة على Vercel**: Import من GitHub، Root Directory = `frontend`، بدون Build.
 - بعد نشر الباك إند حط رابطه في `frontend/config.js`.
 
-ملاحظة: خطة Render المجانية تنيّم السيرفر بعد فترة بدون استخدام، فأول طلب ياخذ وقت. اللعبة ما تنتظره: إذا تأخر، تستخدم الأسئلة المحفوظة في الواجهة مباشرة.
+ملاحظة: خطة Render المجانية تنيّم السيرفر بعد فترة بدون استخدام، فأول طلب ياخذ وقت. اللعبة ما تنتظره: إذا تأخر، تستخدم الأسئلة المحفوظة في الواجهة مباشرة. لوحة التحكم تنتظره لين يصحى.
