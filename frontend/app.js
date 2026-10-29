@@ -361,7 +361,7 @@
         <article class="qcard" style="--team:${color}">
           <div class="weave" aria-hidden="true"></div>
           <div class="qbody">
-            <div class="qmeta"><span>${esc(cat.name)}</span><span class="points ${c.double ? "double" : ""}">${ar(pts(c.q.level))}</span></div>
+            <div class="qmeta"><span>${esc(cat.name)}</span><span class="qmeta-end"><span class="points ${c.double ? "double" : ""}">${ar(pts(c.q.level))}</span>${c.revealed ? "" : `<button class="back-btn" id="back">رجوع للوحة</button>`}</span></div>
             <p class="qtext" id="qtext">${esc(c.q.q)}</p>
 
             ${c.revealed ? `
@@ -394,6 +394,7 @@
       root.querySelector("[data-win]").focus();
     } else {
       root.querySelector("#reveal").addEventListener("click", reveal);
+      root.querySelector("#back").addEventListener("click", backToBoard);
       root.querySelectorAll("[data-help]").forEach((b) => b.addEventListener("click", () => useHelper(b.dataset.help)));
       root.querySelector("#reveal").focus();
     }
@@ -403,6 +404,7 @@
     const c = state.current, t = state.teams[state.turn], cat = state.board[c.ci];
     if (!t.helpers[kind]) return;
     t.helpers[kind] = false;
+    (c.used = c.used || []).push(kind);
     if (kind === "double") { c.double = true; toast("دبل! النقاط ضعفين لـ " + t.name); }
     if (kind === "call") { c.left += S().callBonus; c.total += S().callBonus; toast(ar(S().callBonus) + " ثانية زيادة، اتصلوا بسرعة"); }
     if (kind === "swap") {
@@ -535,7 +537,7 @@
         <article class="qcard taboo" style="--team:${color}">
           <div class="weave" aria-hidden="true"></div>
           <div class="qbody">
-            <div class="qmeta"><span>${esc(cat.name)}</span><span class="points ${c.double && !c.steal ? "double" : ""}">${ar(pts(c.q.level))}</span></div>
+            <div class="qmeta"><span>${esc(cat.name)}</span><span class="qmeta-end"><span class="points ${c.double && !c.steal ? "double" : ""}">${ar(pts(c.q.level))}</span>${c.stage === "scan" && !c.steal ? `<button class="back-btn" id="back">رجوع للوحة</button>` : ""}</span></div>
             ${body}
           </div>
         </article>
@@ -543,10 +545,12 @@
 
     const root = modalRoot.firstElementChild;
     root.querySelectorAll("[data-help]").forEach((b) => b.addEventListener("click", () => useHelper(b.dataset.help)));
+    const back = root.querySelector("#back");
+    if (back) back.addEventListener("click", backToBoard);
     if (c.stage === "scan") {
       root.querySelector("#start-now").addEventListener("click", startTabooPlay);
     } else {
-      root.querySelector("#guessed").addEventListener("click", () => award(c.team));
+      root.querySelector("#guessed").addEventListener("click", () => tabooFinish(c.team));
       root.querySelector("#said-forbidden").addEventListener("click", () => tabooFail("forbidden"));
       root.querySelector("#guessed").focus();
     }
@@ -587,9 +591,84 @@
       renderTaboo();
       startPolling();
     } else {
-      toast(reason === "time" ? "خلص الوقت، محد خمّنها" : "كلمة ممنوعة، محد ياخذ النقاط");
-      award(-1);
+      tabooFinish(-1, reason);
     }
+  }
+
+  // رجوع للوحة بدون ما تنحسب الخانة: الدور يظل نفسه، ووسائل المساعدة المستخدمة ترجع
+  function backToBoard() {
+    const c = state.current;
+    if (!c) return;
+    stopTimer(); stopPolling();
+    const opener = state.teams[state.turn];
+    (c.used || []).forEach((k) => { opener.helpers[k] = true; });
+    if (!c.taboo) {
+      // السؤال العادي انشاف، فنبدّله بسؤال ثاني بنفس النقاط إذا فيه
+      const cat = state.board[c.ci];
+      const spare = cat.spares[c.q.level];
+      if (spare) {
+        cat.tiles[c.ti] = spare;
+        cat.spares[c.q.level] = null;
+        addHistory([spare.id]);
+      } else {
+        toast("ما في سؤال بديل لهالخانة، بيظل نفس السؤال");
+      }
+    }
+    state.current = null;
+    save();
+    modalRoot.innerHTML = "";
+    renderBoard();
+  }
+
+  // نهاية جولة «لا تقول»: نحسب النقاط ونعرض مين خمّنها والكلمة والممنوعات
+  function tabooFinish(winner, reason) {
+    const c = state.current;
+    stopTimer(); stopPolling();
+    const cat = state.board[c.ci];
+    const doubled = winner >= 0 && c.double && winner === state.turn;
+    const gained = winner >= 0 ? pts(c.q.level) * (doubled ? 2 : 1) : 0;
+    if (winner >= 0) {
+      state.teams[winner].score += gained;
+      beep(winner === state.turn ? 990 : 700, 0.25);
+    } else beep(220, 0.4);
+    state.results[tileKey(c.ci, c.ti)] = winner;
+    state.turn = 1 - state.turn;
+    state.current = null;
+    save();
+
+    const total = state.board.length * 6;
+    const over = Object.keys(state.results).length >= total;
+    if (!over) renderBoard();
+    else document.querySelectorAll(".scorebar .score").forEach((el, i) => { el.textContent = ar(state.teams[i].score); });
+
+    const color = winner >= 0 ? TEAM_COLORS[winner] : "var(--hair)";
+    const words = forbiddenList(c.q.a);
+    modalRoot.innerHTML = `
+      <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="rtitle">
+        <article class="qcard taboo result" style="--team:${color}">
+          <div class="weave" aria-hidden="true"></div>
+          <div class="qbody">
+            <div class="qmeta"><span>${esc(cat.name)}</span><span class="points">${ar(pts(c.q.level))}</span></div>
+            ${winner >= 0 ? `
+              <p class="qtext taboo-title" id="rtitle"><span class="tname-c">${esc(state.teams[winner].name)}</span> خمّنوها!</p>
+              <p class="gained">+${ar(gained)}${doubled ? ` <small>دبل</small>` : ""}</p>` : `
+              <p class="qtext taboo-title" id="rtitle">محد خمّنها</p>
+              <p class="reason">${reason === "time" ? "خلص الوقت على الفريقين" : "قالوا كلمة ممنوعة"}</p>`}
+            <div class="reveal-word">
+              <small>الكلمة</small>
+              <strong>${esc(c.q.q)}</strong>
+              ${words.length ? `<small>الكلمات الممنوعة</small><div class="chips">${words.map((x) => `<span>${esc(x)}</span>`).join("")}</div>` : ""}
+            </div>
+            <div class="qactions"><span class="spacer"></span><button class="btn" id="close-result">رجوع للوحة</button></div>
+          </div>
+        </article>
+      </div>`;
+    const btn = document.getElementById("close-result");
+    btn.focus();
+    btn.addEventListener("click", () => {
+      modalRoot.innerHTML = "";
+      if (over) renderBoard(); // آخر خانة: يروح لشاشة الفايز
+    });
   }
 
   // نسأل السيرفر كل ثانية ونص: ضغط الواصف «جاهز»؟
