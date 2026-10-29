@@ -236,7 +236,7 @@
             const style = p ? `style="background:${TEAM_COLORS[p.team]}"` : "";
             return `<button class="cat-card" data-id="${c.id}" aria-pressed="${!!p}" ${style} ${p || picking === null ? "disabled" : ""}>
               <span class="name">${esc(c.name)}</span>
-              <span class="count">${p ? "اختيار " + esc(state.teams[p.team].name) : ar(c.count) + (c.type === "taboo" ? " كلمة" : " سؤال")}</span>
+              <span class="count">${p ? "اختيار " + esc(state.teams[p.team].name) : ar(c.count) + (c.type === "taboo" || c.type === "charades" ? " كلمة" : " سؤال")}</span>
             </button>`;
           }).join("")}
         </div>
@@ -342,7 +342,7 @@
   // ---------- السؤال ----------
   function openQuestion(ci, ti) {
     const cat = state.board[ci];
-    if (cat.type === "taboo") return openTaboo(ci, ti);
+    if (cat.type === "taboo" || cat.type === "charades") return openTaboo(ci, ti);
     state.current = { ci, ti, q: cat.tiles[ti], double: false, revealed: false, left: S().questionTime, total: S().questionTime, called: false };
     beep(440, 0.12);
     renderQuestion();
@@ -463,7 +463,9 @@
   const forbiddenList = (a) => String(a || "").split(/[،,]/).map((x) => x.trim()).filter(Boolean);
 
   function wordLink(c) {
-    const payload = JSON.stringify({ w: c.q.q, f: forbiddenList(c.q.a), t: state.teams[c.team].name });
+    const payload = JSON.stringify(c.mime
+      ? { m: "c", w: c.q.q, k: c.q.a || "", t: state.teams[c.team].name }
+      : { w: c.q.q, f: forbiddenList(c.q.a), t: state.teams[c.team].name });
     const bytes = new TextEncoder().encode(payload);
     const d = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     const url = new URL("word.html", location.href);
@@ -474,7 +476,7 @@
   function openTaboo(ci, ti) {
     const cat = state.board[ci];
     state.current = {
-      ci, ti, q: cat.tiles[ti], taboo: true, double: false,
+      ci, ti, q: cat.tiles[ti], taboo: true, mime: cat.type === "charades", double: false,
       stage: "scan", team: state.turn, steal: false,
       left: S().tabooTime, total: S().tabooTime, roundId: newRoundId(),
     };
@@ -507,7 +509,7 @@
           <div class="qr-box">${qr}</div>
           <ul class="scan-steps">
             <li>افتح كاميرا الجوال وامسح الباركود</li>
-            <li>الكلمة والممنوعات تطلع على جوالك بس</li>
+            <li>${c.mime ? "الكلمة ونوعها تطلع على جوالك بس، وممنوع تتكلم" : "الكلمة والممنوعات تطلع على جوالك بس"}</li>
             <li>اضغط «جاهز» ويبدأ تايمر ${secsFor >= 60 && secsFor % 60 === 0 ? (secsFor === 60 ? "دقيقة" : ar(secsFor / 60) + " دقايق") : secsFor === 30 ? "نص دقيقة" : ar(secsFor) + " ثانية"}</li>
           </ul>
         </div>
@@ -519,7 +521,7 @@
     } else {
       const pct = Math.max(0, (c.left / c.total) * 100);
       body = `
-        <p class="qtext taboo-title" id="qtext">${c.steal ? `فرصة <span class="tname-c">${esc(team.name)}</span>، خمّنوها!` : `<span class="tname-c">${esc(team.name)}</span> يوصفون الحين`}</p>
+        <p class="qtext taboo-title" id="qtext">${c.steal ? `فرصة <span class="tname-c">${esc(team.name)}</span>، خمّنوها!` : `<span class="tname-c">${esc(team.name)}</span> ${c.mime ? "يمثّلون الحين" : "يوصفون الحين"}`}</p>
         <div class="timer-row">
           <span class="secs" id="secs">${ar(c.left)}</span>
           <div class="timer ${c.left <= 10 ? "low" : ""}" id="bar"><i style="width:${pct}%"></i></div>
@@ -527,7 +529,7 @@
         <div class="qactions">
           ${helperBtns(["double", "call"])}
           <span class="spacer"></span>
-          <button class="btn ghost" id="said-forbidden">قال كلمة ممنوعة</button>
+          <button class="btn ghost" id="said-forbidden">${c.mime ? "تكلّم" : "قال كلمة ممنوعة"}</button>
           <button class="btn team" id="guessed">خمّنوها</button>
         </div>`;
     }
@@ -583,7 +585,7 @@
     stopTimer();
     if (!c.steal) {
       const other = state.teams[1 - c.team];
-      toast((reason === "time" ? "خلص الوقت! " : "كلمة ممنوعة! ") + "الفرصة لـ " + other.name);
+      toast((reason === "time" ? "خلص الوقت! " : c.mime ? "تكلّم! " : "كلمة ممنوعة! ") + "الفرصة لـ " + other.name);
       c.steal = true;
       c.team = 1 - c.team;
       c.stage = "scan";
@@ -642,7 +644,7 @@
     else document.querySelectorAll(".scorebar .score").forEach((el, i) => { el.textContent = ar(state.teams[i].score); });
 
     const color = winner >= 0 ? TEAM_COLORS[winner] : "var(--hair)";
-    const words = forbiddenList(c.q.a);
+    const words = c.mime ? [] : forbiddenList(c.q.a);
     modalRoot.innerHTML = `
       <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="rtitle">
         <article class="qcard taboo result" style="--team:${color}">
@@ -653,10 +655,11 @@
               <p class="qtext taboo-title" id="rtitle"><span class="tname-c">${esc(state.teams[winner].name)}</span> خمّنوها!</p>
               <p class="gained">+${ar(gained)}${doubled ? ` <small>دبل</small>` : ""}</p>` : `
               <p class="qtext taboo-title" id="rtitle">محد خمّنها</p>
-              <p class="reason">${reason === "time" ? "خلص الوقت على الفريقين" : "قالوا كلمة ممنوعة"}</p>`}
+              <p class="reason">${reason === "time" ? "خلص الوقت على الفريقين" : c.mime ? "تكلّموا" : "قالوا كلمة ممنوعة"}</p>`}
             <div class="reveal-word">
               <small>الكلمة</small>
               <strong>${esc(c.q.q)}</strong>
+              ${c.mime && c.q.a ? `<small>نوعها</small><div class="chips"><span>${esc(c.q.a)}</span></div>` : ""}
               ${words.length ? `<small>الكلمات الممنوعة</small><div class="chips">${words.map((x) => `<span>${esc(x)}</span>`).join("")}</div>` : ""}
             </div>
             <div class="qactions"><span class="spacer"></span><button class="btn" id="close-result">رجوع للوحة</button></div>

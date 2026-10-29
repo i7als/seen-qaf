@@ -154,7 +154,7 @@
       <details class="cat ${c.enabled ? "" : "off"}" data-cat="${c.id}" ${open ? "open" : ""}>
         <summary>
           <span class="cname">${esc(c.name)}</span>
-          ${c.type === "taboo" ? `<span class="badge">لا تقول</span>` : ""}
+          ${c.type === "taboo" ? `<span class="badge">لا تقول</span>` : c.type === "charades" ? `<span class="badge">بدون كلمة</span>` : ""}
           ${c.enabled ? "" : `<span class="badge">مخفية</span>`}
           <span class="counts">${LEVELS.map((l) => `<span class="${short(c, l) ? "short" : ""}" title="${LEVEL_NAMES[l]}">${ar(bank.settings.points[LEVELS.indexOf(l)])}: ${ar(c.questions.filter((q) => q.level === l).length)}</span>`).join("")}</span>
         </summary>
@@ -171,14 +171,17 @@
             <select class="inp sel" data-field="cat-type" data-ci="${ci}">
               <option value="qa" ${c.type !== "taboo" ? "selected" : ""}>سؤال وجواب</option>
               <option value="taboo" ${c.type === "taboo" ? "selected" : ""}>لا تقول</option>
+              <option value="charades" ${c.type === "charades" ? "selected" : ""}>بدون كلمة</option>
             </select>
           </label>
           <label class="switch"><input type="checkbox" data-field="cat-enabled" data-ci="${ci}" ${c.enabled ? "checked" : ""}> تظهر في اللعبة</label>
           <button class="danger-btn" data-act="del-cat" data-ci="${ci}">احذف الفئة</button>
         </div>
         ${c.type === "taboo" ? `<p class="type-hint">في «لا تقول» اكتب الكلمة، وبعدها الكلمات الممنوعة وبينها فاصلة. مثال: ماي، سمك، أزرق</p>` : ""}
+        ${c.type === "charades" ? `<p class="type-hint">في «بدون كلمة» اكتب الكلمة اللي بيمثلونها، ونوعها (مسلسل، مسرحية، كويتيات…). النوع يطلع للممثل على جواله.</p>` : ""}
         ${LEVELS.map((l, li) => {
-          const isT = c.type === "taboo";
+          const isT = c.type === "taboo" || c.type === "charades";
+          const isC = c.type === "charades";
           const qs = c.questions.map((q, qi) => ({ q, qi })).filter(({ q }) => q.level === l);
           return `
             <section class="level">
@@ -186,7 +189,7 @@
               ${qs.map(({ q, qi }) => `
                 <div class="qrow ${query && matches(q) ? "hit" : ""}">
                   <div><span class="lab">${isT ? "الكلمة" : "السؤال"}</span><textarea class="txt" rows="2" maxlength="400" data-field="q" data-ci="${ci}" data-qi="${qi}">${esc(q.q)}</textarea></div>
-                  <div class="a-cell"><span class="lab">${isT ? "الممنوعات" : "الجواب"}</span><textarea class="txt" rows="2" maxlength="300" ${isT ? `placeholder="مثال: ماي، سمك، أزرق"` : ""} data-field="a" data-ci="${ci}" data-qi="${qi}">${esc(q.a)}</textarea></div>
+                  <div class="a-cell"><span class="lab">${isC ? "نوعها" : isT ? "الممنوعات" : "الجواب"}</span><textarea class="txt" rows="2" maxlength="300" ${isC ? `placeholder="مثال: مسلسل"` : isT ? `placeholder="مثال: ماي، سمك، أزرق"` : ""} data-field="a" data-ci="${ci}" data-qi="${qi}">${esc(q.a)}</textarea></div>
                   <button class="icon-btn" data-act="del-q" data-ci="${ci}" data-qi="${qi}" aria-label="احذف" title="احذف">×</button>
                 </div>`).join("")}
               <button class="add-q" data-act="add-q" data-ci="${ci}" data-level="${l}">${isT ? "أضف كلمة" : "أضف سؤال"} ${ar(bank.settings.points[li])}</button>
@@ -355,7 +358,7 @@
   function validate() {
     const empty = [];
     bank.categories.forEach((c) => c.questions.forEach((q) => {
-      if (!q.q.trim() || !q.a.trim()) empty.push(c.name);
+      if (!q.q.trim() || (!q.a.trim() && c.type !== "charades")) empty.push(c.name);
     }));
     if (empty.length && !confirm(`فيه ${ar(empty.length)} سؤال ناقص (بدون سؤال أو جواب) في: ${[...new Set(empty)].join("، ")}.\nالأسئلة الناقصة بتنحذف عند الحفظ. تكمّل؟`)) return false;
     const s = bank.settings;

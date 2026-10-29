@@ -23,6 +23,9 @@
     .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 10px; }
     .chips span { background: var(--hair); color: var(--wool); border-radius: 999px; padding: 8px 14px; font-size: 18px; font-weight: 600; text-decoration: line-through; text-decoration-color: rgba(234,219,190,.55); }
     .rule { font-size: 14px; opacity: .7; margin: 0 0 22px; }
+    .kind { display: inline-block; margin: 12px 0 0; background: var(--hair); color: var(--wool); border-radius: 999px; padding: 4px 14px; font-size: 15px; font-weight: 600; }
+    .kind + .the-word { margin-top: 6px; }
+    .mime-rule { margin-bottom: 22px; }
     .wbody .btn { width: 100%; min-height: 60px; font-size: 20px; background: var(--hair); color: var(--wool); box-shadow: 0 4px 0 #120d0c; }
     .wbody .btn.ghost { background: transparent; color: var(--hair); box-shadow: inset 0 0 0 2px rgba(42,33,30,.35); margin-top: 10px; min-height: 48px; font-size: 16px; }
     .status { min-height: 1.6em; margin: 14px 0 0; font-weight: 600; }
@@ -54,7 +57,7 @@
         const bytes = Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
         const data = JSON.parse(new TextDecoder().decode(bytes));
         if (!r || !data.w) return null;
-        return { r, w: data.w, f: Array.isArray(data.f) ? data.f : [], t: data.t || "" };
+        return { r, w: data.w, f: Array.isArray(data.f) ? data.f : [], t: data.t || "", mime: data.m === "c", k: data.k || "" };
       } catch { return null; }
     }
 
@@ -68,10 +71,12 @@
       <article class="wcard">
         <div class="weave" aria-hidden="true"></div>
         <div class="wbody">
-          <p class="for">${info.t ? `أنت توصف لـ <b>${esc(info.t)}</b>` : "أنت الواصف"}</p>
+          <p class="for">${info.t ? `أنت ${info.mime ? "تمثّل" : "توصف"} لـ <b>${esc(info.t)}</b>` : info.mime ? "أنت الممثل" : "أنت الواصف"}</p>
+          ${info.mime && info.k ? `<p class="kind">${esc(info.k)}</p>` : ""}
           <h1 class="the-word">${esc(info.w)}</h1>
+          ${info.mime ? `<p class="no-say mime-rule">ممنوع تتكلم، مثّلها بالإشارة بس</p>` : `
           ${info.f.length ? `<p class="no-say">لا تقول</p><div class="chips">${info.f.map((x) => `<span>${esc(x)}</span>`).join("")}</div>` : ""}
-          <p class="rule">ولا تقول الكلمة نفسها أو أي جزء منها</p>
+          <p class="rule">ولا تقول الكلمة نفسها أو أي جزء منها</p>`}
           <button class="btn" id="ready">جاهز، ابدأ التايمر</button>
           <p class="status" id="status" role="status"></p>
         </div>
@@ -92,7 +97,7 @@
         if (!r.ok) throw new Error(r.status);
         btn.remove();
         status.className = "status go";
-        status.textContent = "بدأ التايمر، وصّف الحين!";
+        status.textContent = info.mime ? "بدأ التايمر، مثّل الحين!" : "بدأ التايمر، وصّف الحين!";
         if (navigator.vibrate) navigator.vibrate(120);
       } catch {
         btn.disabled = false; btn.textContent = "جرّب مرة ثانية";

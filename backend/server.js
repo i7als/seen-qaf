@@ -33,7 +33,8 @@ const DEFAULT_SETTINGS = {
   tabooTime: 60,       // وقت الفريق الأول في «لا تقول»
   tabooStealTime: 30,  // وقت الفرصة الثانية للفريق الثاني
 };
-const CATEGORY_TYPES = ["qa", "taboo"]; // qa: سؤال وجواب، taboo: لا تقول (الكلمة في q والممنوعات في a)
+// qa: سؤال وجواب | taboo: لا تقول (الكلمة في q والممنوعات في a) | charades: بدون كلمة (الكلمة في q ونوعها في a)
+const CATEGORY_TYPES = ["qa", "taboo", "charades"];
 
 const clampInt = (v, min, max, dflt) => {
   const n = Math.round(Number(v));
@@ -67,14 +68,14 @@ function normalize(input) {
     let id = cleanText(c.id, 60).replace(/[^\w-]/g, "") || newId("c");
     while (seenCat.has(id)) id = newId("c");
     seenCat.add(id);
+    const type = CATEGORY_TYPES.includes(c.type) ? c.type : "qa";
     const questions = (Array.isArray(c.questions) ? c.questions : []).slice(0, 1000).map((q) => {
       const level = LEVELS.includes(Number(q.level)) ? Number(q.level) : 200;
       let qid = cleanText(q.id, 80).replace(/[^\w-]/g, "") || newId(id + "-" + level);
       while (seenQ.has(qid)) qid = newId(id + "-" + level);
       seenQ.add(qid);
       return { id: qid, level, q: cleanText(q.q, 400), a: cleanText(q.a, 300) };
-    }).filter((q) => q.q && q.a);
-    const type = CATEGORY_TYPES.includes(c.type) ? c.type : "qa";
+    }).filter((q) => q.q && (q.a || type === "charades")); // نوع الكلمة في «بدون كلمة» اختياري
     return { id, name: cleanText(c.name, 40) || "فئة بدون اسم", type, enabled: c.enabled !== false, questions };
   });
 
