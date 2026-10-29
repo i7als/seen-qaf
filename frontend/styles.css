@@ -256,3 +256,25 @@ button:disabled { cursor: not-allowed; }
   .scorebar { gap: 8px; }
   .helpers { justify-content: center; }
 }
+
+/* ===== لا تقول ===== */
+.qcard.taboo .taboo-title { font-size: clamp(24px, 3.6vw, 40px); margin: 18px 0 18px; }
+.taboo-title .tname-c { color: var(--madder); }
+.scan-row { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; margin-bottom: 22px; }
+.qr-box {
+  width: clamp(200px, 30vw, 320px); aspect-ratio: 1; background: #fff;
+  border-radius: 12px; padding: 6px; box-shadow: 0 0 0 4px var(--team);
+}
+.qr-box svg { display: block; width: 100%; height: 100%; }
+.qr-fail { color: var(--madder); text-align: center; margin: 40% 0 0; }
+.scan-steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 12px; font-size: clamp(16px, 1.8vw, 20px); }
+.scan-steps li { counter-increment: s; display: flex; gap: 10px; align-items: baseline; }
+.scan-steps li::before {
+  content: counter(s, arabic-indic); flex: none; width: 30px; height: 30px; border-radius: 50%;
+  display: inline-grid; place-items: center; background: var(--hair); color: var(--wool);
+  font-family: "Reem Kufi", sans-serif; font-size: 16px;
+}
+@media (max-width: 640px) {
+  .scan-row { grid-template-columns: 1fr; justify-items: center; }
+  .qr-box { width: min(260px, 72vw); }
+}

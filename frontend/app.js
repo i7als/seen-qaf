@@ -7,7 +7,7 @@
   const HISTORY_KEY = "seenqaf.history.v1";
   const TEAM_COLORS = ["var(--saffron)", "var(--palm)"];
   const LEVELS = [200, 400, 600];
-  const DEFAULT_SETTINGS = { questionTime: 60, callBonus: 30, points: [200, 400, 600], categoriesPerTeam: 3, helpers: { double: true, call: true, swap: true } };
+  const DEFAULT_SETTINGS = { questionTime: 60, callBonus: 30, points: [200, 400, 600], categoriesPerTeam: 3, helpers: { double: true, call: true, swap: true }, tabooTime: 60, tabooStealTime: 30 };
   const SCORE_STEP = 100; // مقدار الزيادة أو النقص بالأسهم
   const HELPERS = {
     double: { label: "دبل", hint: () => "نقاط السؤال ضعفين إذا جاوبتوا صح" },
@@ -30,6 +30,7 @@
   const pickOrder = () => Array.from({ length: S().categoriesPerTeam * 2 }, (_, i) => i % 2);
   let localBank = null;
   let timer = null;
+  let poll = null; // متابعة زر «جاهز» من جوال الواصف
 
   function freshState(names) {
     return {
@@ -98,7 +99,7 @@
       categories = cats; settings = { ...DEFAULT_SETTINGS, ...st };
     } catch {
       const bank = await getLocalBank();
-      categories = bank.categories.filter(playable).map((c) => ({ id: c.id, name: c.name, count: c.questions.length }));
+      categories = bank.categories.filter(playable).map((c) => ({ id: c.id, name: c.name, type: c.type, count: c.questions.length }));
       settings = { ...DEFAULT_SETTINGS, ...(bank.settings || {}) };
     }
     return categories;
@@ -122,7 +123,7 @@
         tiles.push(chosen[0], chosen[1]);
         spares[level] = chosen[2] || null;
       }
-      return { id: cat.id, name: cat.name, tiles, spares };
+      return { id: cat.id, name: cat.name, type: cat.type, tiles, spares };
     });
   }
 
@@ -169,7 +170,7 @@
 
   // ---------- الشاشات ----------
   function render() {
-    stopTimer();
+    stopTimer(); stopPolling();
     modalRoot.innerHTML = "";
     ({ home: renderHome, pick: renderPick, board: renderBoard, end: renderEnd }[state.screen] || renderHome)();
   }
@@ -235,7 +236,7 @@
             const style = p ? `style="background:${TEAM_COLORS[p.team]}"` : "";
             return `<button class="cat-card" data-id="${c.id}" aria-pressed="${!!p}" ${style} ${p || picking === null ? "disabled" : ""}>
               <span class="name">${esc(c.name)}</span>
-              <span class="count">${p ? "اختيار " + esc(state.teams[p.team].name) : ar(c.count) + " سؤال"}</span>
+              <span class="count">${p ? "اختيار " + esc(state.teams[p.team].name) : ar(c.count) + (c.type === "taboo" ? " كلمة" : " سؤال")}</span>
             </button>`;
           }).join("")}
         </div>
@@ -341,6 +342,7 @@
   // ---------- السؤال ----------
   function openQuestion(ci, ti) {
     const cat = state.board[ci];
+    if (cat.type === "taboo") return openTaboo(ci, ti);
     state.current = { ci, ti, q: cat.tiles[ti], double: false, revealed: false, left: S().questionTime, total: S().questionTime, called: false };
     beep(440, 0.12);
     renderQuestion();
@@ -409,9 +411,11 @@
       cat.tiles[c.ti] = spare;
       c.q = spare; c.left = S().questionTime; c.total = S().questionTime;
       addHistory([spare.id]);
-      toast("تبدّل السؤال");
+      if (c.taboo) { c.roundId = newRoundId(); startPolling(); }
+      toast(c.taboo ? "تبدّلت الكلمة، امسحوا الباركود الجديد" : "تبدّل السؤال");
     }
-    beep(760, 0.1); save(); renderQuestion();
+    beep(760, 0.1); save();
+    if (c.taboo) renderTaboo(); else renderQuestion();
   }
 
   function startTimer() {
@@ -440,10 +444,173 @@
     state.results[tileKey(c.ci, c.ti)] = winner;
     state.turn = 1 - state.turn;
     state.current = null;
+    stopTimer(); stopPolling();
     save();
     modalRoot.innerHTML = "";
     renderBoard();
   }
+
+
+  // ---------- «لا تقول» ----------
+  // الفريق اللي عليه الدور: واحد منهم يمسح الباركود، يشوف الكلمة على جواله، ويضغط «جاهز».
+  // إذا خلص وقتهم أو قالوا كلمة ممنوعة، تنتقل الفرصة للفريق الثاني بوقت أقل.
+  function newRoundId() {
+    const b = crypto.getRandomValues(new Uint8Array(9));
+    return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  const forbiddenList = (a) => String(a || "").split(/[،,]/).map((x) => x.trim()).filter(Boolean);
+
+  function wordLink(c) {
+    const payload = JSON.stringify({ w: c.q.q, f: forbiddenList(c.q.a), t: state.teams[c.team].name });
+    const bytes = new TextEncoder().encode(payload);
+    const d = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const url = new URL("word.html", location.href);
+    url.search = ""; url.hash = "r=" + c.roundId + "&d=" + d;
+    return url.toString();
+  }
+
+  function openTaboo(ci, ti) {
+    const cat = state.board[ci];
+    state.current = {
+      ci, ti, q: cat.tiles[ti], taboo: true, double: false,
+      stage: "scan", team: state.turn, steal: false,
+      left: S().tabooTime, total: S().tabooTime, roundId: newRoundId(),
+    };
+    if (API) fetch(API + "/api/health").catch(() => {}); // نصحّي السيرفر
+    beep(440, 0.12);
+    renderTaboo();
+    startPolling();
+  }
+
+  function renderTaboo() {
+    const c = state.current;
+    const cat = state.board[c.ci];
+    const team = state.teams[c.team];
+    const opener = state.teams[state.turn];
+    const color = TEAM_COLORS[c.team];
+    const secsFor = c.steal ? S().tabooStealTime : S().tabooTime;
+    const helperBtns = (kinds) => c.steal ? "" : helpersOn().filter((k) => kinds.includes(k)).map((k) => {
+      const off = !opener.helpers[k] || (k === "swap" && !cat.spares[c.q.level]);
+      return `<button class="btn helper-btn" data-help="${k}" title="${HELPERS[k].hint()}" ${off ? "disabled" : ""}>${HELPERS[k].label}</button>`;
+    }).join("");
+
+    let body;
+    if (c.stage === "scan") {
+      let qr = "";
+      try { qr = SeenQR.svg(wordLink(c), { margin: 3, label: "باركود الكلمة" }); }
+      catch { qr = `<p class="qr-fail">ما قدرنا نسوي الباركود</p>`; }
+      body = `
+        <p class="qtext taboo-title" id="qtext">${c.steal ? `فرصة <span class="tname-c">${esc(team.name)}</span>` : `دور <span class="tname-c">${esc(team.name)}</span>`}: واحد منكم يسوي سكان</p>
+        <div class="scan-row">
+          <div class="qr-box">${qr}</div>
+          <ul class="scan-steps">
+            <li>افتح كاميرا الجوال وامسح الباركود</li>
+            <li>الكلمة والممنوعات تطلع على جوالك بس</li>
+            <li>اضغط «جاهز» ويبدأ تايمر ${secsFor >= 60 && secsFor % 60 === 0 ? (secsFor === 60 ? "دقيقة" : ar(secsFor / 60) + " دقايق") : secsFor === 30 ? "نص دقيقة" : ar(secsFor) + " ثانية"}</li>
+          </ul>
+        </div>
+        <div class="qactions">
+          ${helperBtns(["double", "swap"])}
+          <span class="spacer"></span>
+          <button class="btn ghost" id="start-now">ابدأ التايمر</button>
+        </div>`;
+    } else {
+      const pct = Math.max(0, (c.left / c.total) * 100);
+      body = `
+        <p class="qtext taboo-title" id="qtext">${c.steal ? `فرصة <span class="tname-c">${esc(team.name)}</span>، خمّنوها!` : `<span class="tname-c">${esc(team.name)}</span> يوصفون الحين`}</p>
+        <div class="timer-row">
+          <span class="secs" id="secs">${ar(c.left)}</span>
+          <div class="timer ${c.left <= 10 ? "low" : ""}" id="bar"><i style="width:${pct}%"></i></div>
+        </div>
+        <div class="qactions">
+          ${helperBtns(["double", "call"])}
+          <span class="spacer"></span>
+          <button class="btn ghost" id="said-forbidden">قال كلمة ممنوعة</button>
+          <button class="btn team" id="guessed">خمّنوها</button>
+        </div>`;
+    }
+
+    modalRoot.innerHTML = `
+      <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="qtext">
+        <article class="qcard taboo" style="--team:${color}">
+          <div class="weave" aria-hidden="true"></div>
+          <div class="qbody">
+            <div class="qmeta"><span>${esc(cat.name)}</span><span class="points ${c.double && !c.steal ? "double" : ""}">${ar(pts(c.q.level))}</span></div>
+            ${body}
+          </div>
+        </article>
+      </div>`;
+
+    const root = modalRoot.firstElementChild;
+    root.querySelectorAll("[data-help]").forEach((b) => b.addEventListener("click", () => useHelper(b.dataset.help)));
+    if (c.stage === "scan") {
+      root.querySelector("#start-now").addEventListener("click", startTabooPlay);
+    } else {
+      root.querySelector("#guessed").addEventListener("click", () => award(c.team));
+      root.querySelector("#said-forbidden").addEventListener("click", () => tabooFail("forbidden"));
+      root.querySelector("#guessed").focus();
+    }
+  }
+
+  function startTabooPlay() {
+    const c = state.current;
+    if (!c || !c.taboo || c.stage !== "scan") return;
+    stopPolling();
+    c.stage = "play";
+    c.left = c.total = c.steal ? S().tabooStealTime : S().tabooTime;
+    beep(660, 0.15);
+    renderTaboo();
+    stopTimer();
+    timer = setInterval(() => {
+      const cur = state.current;
+      if (!cur || !cur.taboo || cur.stage !== "play") return stopTimer();
+      cur.left -= 1;
+      const secs = document.getElementById("secs"), bar = document.getElementById("bar");
+      if (secs) secs.textContent = ar(Math.max(0, cur.left));
+      if (bar) { bar.firstElementChild.style.width = Math.max(0, (cur.left / cur.total) * 100) + "%"; bar.classList.toggle("low", cur.left <= 10); }
+      if (cur.left <= 5 && cur.left > 0) beep(880, 0.06);
+      if (cur.left <= 0) { beep(220, 0.5); tabooFail("time"); }
+    }, 1000);
+  }
+
+  // خلص الوقت أو قالوا كلمة ممنوعة
+  function tabooFail(reason) {
+    const c = state.current;
+    stopTimer();
+    if (!c.steal) {
+      const other = state.teams[1 - c.team];
+      toast((reason === "time" ? "خلص الوقت! " : "كلمة ممنوعة! ") + "الفرصة لـ " + other.name);
+      c.steal = true;
+      c.team = 1 - c.team;
+      c.stage = "scan";
+      c.roundId = newRoundId();
+      renderTaboo();
+      startPolling();
+    } else {
+      toast(reason === "time" ? "خلص الوقت، محد خمّنها" : "كلمة ممنوعة، محد ياخذ النقاط");
+      award(-1);
+    }
+  }
+
+  // نسأل السيرفر كل ثانية ونص: ضغط الواصف «جاهز»؟
+  function startPolling() {
+    stopPolling();
+    if (!API) return;
+    const id = state.current.roundId;
+    let busy = false;
+    poll = setInterval(async () => {
+      const c = state.current;
+      if (!c || c.roundId !== id || c.stage !== "scan") return stopPolling();
+      if (busy) return;
+      busy = true;
+      try {
+        const r = await fetchJson(API + "/api/round/" + id, {}, 6000);
+        const now = state.current;
+        if (r.ready && now && now.roundId === id && now.stage === "scan") startTabooPlay();
+      } catch {} finally { busy = false; }
+    }, 1500);
+  }
+  function stopPolling() { if (poll) clearInterval(poll); poll = null; }
 
   // ---------- النهاية ----------
   function renderEnd() {
@@ -468,7 +635,7 @@
 
   // مفاتيح الكيبورد: مسافة تكشف الجواب
   document.addEventListener("keydown", (e) => {
-    if (state.current && !state.current.revealed && e.code === "Space" && document.activeElement?.id !== "reveal") { e.preventDefault(); reveal(); }
+    if (state.current && !state.current.taboo && !state.current.revealed && e.code === "Space" && document.activeElement?.id !== "reveal") { e.preventDefault(); reveal(); }
   });
 
   if (state.screen === "board" && !state.board) state.screen = "home";

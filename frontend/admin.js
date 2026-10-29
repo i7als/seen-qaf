@@ -154,6 +154,7 @@
       <details class="cat ${c.enabled ? "" : "off"}" data-cat="${c.id}" ${open ? "open" : ""}>
         <summary>
           <span class="cname">${esc(c.name)}</span>
+          ${c.type === "taboo" ? `<span class="badge">لا تقول</span>` : ""}
           ${c.enabled ? "" : `<span class="badge">مخفية</span>`}
           <span class="counts">${LEVELS.map((l) => `<span class="${short(c, l) ? "short" : ""}" title="${LEVEL_NAMES[l]}">${ar(bank.settings.points[LEVELS.indexOf(l)])}: ${ar(c.questions.filter((q) => q.level === l).length)}</span>`).join("")}</span>
         </summary>
@@ -166,21 +167,29 @@
       <div class="cat-body">
         <div class="cat-settings">
           <input class="inp" data-field="cat-name" data-ci="${ci}" value="${esc(c.name)}" maxlength="40" aria-label="اسم الفئة">
+          <label class="switch">نوعها
+            <select class="inp sel" data-field="cat-type" data-ci="${ci}">
+              <option value="qa" ${c.type !== "taboo" ? "selected" : ""}>سؤال وجواب</option>
+              <option value="taboo" ${c.type === "taboo" ? "selected" : ""}>لا تقول</option>
+            </select>
+          </label>
           <label class="switch"><input type="checkbox" data-field="cat-enabled" data-ci="${ci}" ${c.enabled ? "checked" : ""}> تظهر في اللعبة</label>
           <button class="danger-btn" data-act="del-cat" data-ci="${ci}">احذف الفئة</button>
         </div>
+        ${c.type === "taboo" ? `<p class="type-hint">في «لا تقول» اكتب الكلمة، وبعدها الكلمات الممنوعة وبينها فاصلة. مثال: ماي، سمك، أزرق</p>` : ""}
         ${LEVELS.map((l, li) => {
+          const isT = c.type === "taboo";
           const qs = c.questions.map((q, qi) => ({ q, qi })).filter(({ q }) => q.level === l);
           return `
             <section class="level">
-              <h3>${ar(bank.settings.points[li])} نقطة <small>${LEVEL_NAMES[l]} · ${ar(qs.length)} سؤال</small>${qs.length < 2 ? `<span class="warn">يحتاج سؤالين على الأقل</span>` : ""}</h3>
+              <h3>${ar(bank.settings.points[li])} نقطة <small>${LEVEL_NAMES[l]} · ${ar(qs.length)} ${isT ? "كلمة" : "سؤال"}</small>${qs.length < 2 ? `<span class="warn">${isT ? "يحتاج كلمتين على الأقل" : "يحتاج سؤالين على الأقل"}</span>` : ""}</h3>
               ${qs.map(({ q, qi }) => `
                 <div class="qrow ${query && matches(q) ? "hit" : ""}">
-                  <div><span class="lab">السؤال</span><textarea class="txt" rows="2" maxlength="400" data-field="q" data-ci="${ci}" data-qi="${qi}">${esc(q.q)}</textarea></div>
-                  <div class="a-cell"><span class="lab">الجواب</span><textarea class="txt" rows="2" maxlength="300" data-field="a" data-ci="${ci}" data-qi="${qi}">${esc(q.a)}</textarea></div>
-                  <button class="icon-btn" data-act="del-q" data-ci="${ci}" data-qi="${qi}" aria-label="احذف السؤال" title="احذف السؤال">×</button>
+                  <div><span class="lab">${isT ? "الكلمة" : "السؤال"}</span><textarea class="txt" rows="2" maxlength="400" data-field="q" data-ci="${ci}" data-qi="${qi}">${esc(q.q)}</textarea></div>
+                  <div class="a-cell"><span class="lab">${isT ? "الممنوعات" : "الجواب"}</span><textarea class="txt" rows="2" maxlength="300" ${isT ? `placeholder="مثال: ماي، سمك، أزرق"` : ""} data-field="a" data-ci="${ci}" data-qi="${qi}">${esc(q.a)}</textarea></div>
+                  <button class="icon-btn" data-act="del-q" data-ci="${ci}" data-qi="${qi}" aria-label="احذف" title="احذف">×</button>
                 </div>`).join("")}
-              <button class="add-q" data-act="add-q" data-ci="${ci}" data-level="${l}">أضف سؤال ${ar(bank.settings.points[li])}</button>
+              <button class="add-q" data-act="add-q" data-ci="${ci}" data-level="${l}">${isT ? "أضف كلمة" : "أضف سؤال"} ${ar(bank.settings.points[li])}</button>
             </section>`;
         }).join("")}
       </div>`;
@@ -196,6 +205,8 @@
         <div class="grid-fields">
           <label>وقت كل سؤال<input class="inp" type="number" min="10" max="600" data-set="questionTime" value="${s.questionTime}"></label>
           <label>وقت «اتصال» الإضافي<input class="inp" type="number" min="0" max="300" data-set="callBonus" value="${s.callBonus}"></label>
+          <label>وقت «لا تقول» للفريق الأول<input class="inp" type="number" min="10" max="600" data-set="tabooTime" value="${s.tabooTime ?? 60}"></label>
+          <label>وقت الفرصة الثانية<input class="inp" type="number" min="5" max="600" data-set="tabooStealTime" value="${s.tabooStealTime ?? 30}"></label>
         </div>
       </section>
       <section class="panel">
@@ -308,6 +319,9 @@
 
   root.addEventListener("change", (e) => {
     const el = e.target;
+    if (el.dataset.field === "cat-type") {
+      bank.categories[+el.dataset.ci].type = el.value; setDirty(true); render(); return;
+    }
     if (el.dataset.field === "cat-enabled") {
       bank.categories[+el.dataset.ci].enabled = el.checked; setDirty(true); render();
     }

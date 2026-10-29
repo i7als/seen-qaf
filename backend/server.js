@@ -30,7 +30,10 @@ const DEFAULT_SETTINGS = {
   points: [200, 400, 600],
   categoriesPerTeam: 3,
   helpers: { double: true, call: true, swap: true },
+  tabooTime: 60,       // وقت الفريق الأول في «لا تقول»
+  tabooStealTime: 30,  // وقت الفرصة الثانية للفريق الثاني
 };
+const CATEGORY_TYPES = ["qa", "taboo"]; // qa: سؤال وجواب، taboo: لا تقول (الكلمة في q والممنوعات في a)
 
 const clampInt = (v, min, max, dflt) => {
   const n = Math.round(Number(v));
@@ -49,6 +52,8 @@ function normalize(input) {
     callBonus: clampInt(s.callBonus, 0, 300, DEFAULT_SETTINGS.callBonus),
     points: LEVELS.map((d, i) => clampInt(pts[i], 1, 100000, DEFAULT_SETTINGS.points[i])),
     categoriesPerTeam: clampInt(s.categoriesPerTeam, 1, 6, DEFAULT_SETTINGS.categoriesPerTeam),
+    tabooTime: clampInt(s.tabooTime, 10, 600, DEFAULT_SETTINGS.tabooTime),
+    tabooStealTime: clampInt(s.tabooStealTime, 5, 600, DEFAULT_SETTINGS.tabooStealTime),
     helpers: {
       double: s.helpers?.double !== false,
       call: s.helpers?.call !== false,
@@ -69,7 +74,8 @@ function normalize(input) {
       seenQ.add(qid);
       return { id: qid, level, q: cleanText(q.q, 400), a: cleanText(q.a, 300) };
     }).filter((q) => q.q && q.a);
-    return { id, name: cleanText(c.name, 40) || "فئة بدون اسم", enabled: c.enabled !== false, questions };
+    const type = CATEGORY_TYPES.includes(c.type) ? c.type : "qa";
+    return { id, name: cleanText(c.name, 40) || "فئة بدون اسم", type, enabled: c.enabled !== false, questions };
   });
 
   return { version: 2, settings, categories };
@@ -199,8 +205,16 @@ function buildGame(ids, excludeList) {
       chosen.slice(0, PER_LEVEL).forEach((q) => tiles.push(q));
       spares[level] = chosen[PER_LEVEL] || null;
     }
-    return { id: cat.id, name: cat.name, tiles, spares };
+    return { id: cat.id, name: cat.name, type: cat.type, tiles, spares };
   });
+}
+
+// ---------- جولات «لا تقول» (بالذاكرة، تنمسح بعد ساعتين) ----------
+const rounds = new Map();
+function cleanRounds() {
+  const old = Date.now() - 2 * 3600 * 1000;
+  for (const [id, r] of rounds) if (r.at < old) rounds.delete(id);
+  while (rounds.size > 5000) rounds.delete(rounds.keys().next().value);
 }
 
 // ---------- HTTP ----------
@@ -246,7 +260,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && p === "/api/settings") return send(res, 200, bank.settings);
 
     if (req.method === "GET" && p === "/api/categories") {
-      return send(res, 200, bank.categories.filter(playable).map((c) => ({ id: c.id, name: c.name, count: c.questions.length })));
+      return send(res, 200, bank.categories.filter(playable).map((c) => ({ id: c.id, name: c.name, type: c.type, count: c.questions.length })));
     }
 
     if (req.method === "POST" && p === "/api/game") {
@@ -254,6 +268,20 @@ const server = http.createServer(async (req, res) => {
       const board = buildGame(body.categories, body.exclude);
       if (!board) return send(res, 400, { error: `اختاروا ${bank.settings.categoriesPerTeam * 2} فئات` });
       return send(res, 200, { board, settings: bank.settings });
+    }
+
+    // ----- «لا تقول»: زر «جاهز» من جوال الواصف -----
+    // الشاشة الكبيرة تسأل GET /api/round/:id، والجوال يرسل POST /api/round/:id/ready
+    const rm = p.match(/^\/api\/round\/([A-Za-z0-9_-]{6,40})(\/ready)?$/);
+    if (rm) {
+      cleanRounds();
+      if (req.method === "POST" && rm[2]) {
+        rounds.set(rm[1], { ready: true, at: Date.now() });
+        return send(res, 200, { ok: true });
+      }
+      if (req.method === "GET" && !rm[2]) {
+        return send(res, 200, { ready: !!rounds.get(rm[1])?.ready });
+      }
     }
 
     // ----- لوحة التحكم -----

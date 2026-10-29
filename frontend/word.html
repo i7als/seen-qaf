@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>لا تقول · سين قاف</title>
+  <meta name="theme-color" content="#7B1E24">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=Readex+Pro:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .wordpage { max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
+    .wcard { background: var(--wool); color: var(--hair); border-radius: var(--radius-card); overflow: hidden; box-shadow: 0 18px 40px rgba(0,0,0,.35); }
+    .wcard .weave { height: 22px; background: var(--sadu); background-size: 33px 22px; }
+    .wbody { padding: 20px 20px 24px; text-align: center; }
+    .for { font-size: 15px; opacity: .75; margin: 0; }
+    .for b { opacity: 1; }
+    .the-word { font-family: "Reem Kufi", sans-serif; font-weight: 700; font-size: clamp(44px, 15vw, 72px); line-height: 1.2; margin: 14px 0 18px; color: var(--madder); overflow-wrap: anywhere; }
+    .no-say { font-family: "Reem Kufi", sans-serif; font-size: 20px; margin: 0 0 10px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 10px; }
+    .chips span { background: var(--hair); color: var(--wool); border-radius: 999px; padding: 8px 14px; font-size: 18px; font-weight: 600; text-decoration: line-through; text-decoration-color: rgba(234,219,190,.55); }
+    .rule { font-size: 14px; opacity: .7; margin: 0 0 22px; }
+    .wbody .btn { width: 100%; min-height: 60px; font-size: 20px; background: var(--hair); color: var(--wool); box-shadow: 0 4px 0 #120d0c; }
+    .wbody .btn.ghost { background: transparent; color: var(--hair); box-shadow: inset 0 0 0 2px rgba(42,33,30,.35); margin-top: 10px; min-height: 48px; font-size: 16px; }
+    .status { min-height: 1.6em; margin: 14px 0 0; font-weight: 600; }
+    .status.go { font-family: "Reem Kufi", sans-serif; font-size: 26px; color: var(--palm-deep, #2F6B4F); }
+    .status.err { color: var(--madder); }
+    .empty-word { text-align: center; padding: 18vh 10px; }
+    .empty-word h1 { font-size: 32px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <header class="band" aria-hidden="true"></header>
+  <main class="wordpage" id="page"></main>
+
+  <script src="config.js"></script>
+  <script>
+  (() => {
+    "use strict";
+    const API = (window.SEEN_QAF_API || "").replace(/\/$/, "");
+    const page = document.getElementById("page");
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+    // الرابط: word.html#r=<رقم الجولة>&d=<الكلمة مشفرة>
+    function readHash() {
+      try {
+        const p = new URLSearchParams(location.hash.slice(1));
+        const r = p.get("r");
+        let b = (p.get("d") || "").replace(/-/g, "+").replace(/_/g, "/");
+        while (b.length % 4) b += "=";
+        const bytes = Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
+        const data = JSON.parse(new TextDecoder().decode(bytes));
+        if (!r || !data.w) return null;
+        return { r, w: data.w, f: Array.isArray(data.f) ? data.f : [], t: data.t || "" };
+      } catch { return null; }
+    }
+
+    const info = readHash();
+    if (!info) {
+      page.innerHTML = `<section class="empty-word"><h1>الرابط ناقص</h1><p>امسح الباركود اللي على الشاشة من جديد.</p></section>`;
+      return;
+    }
+
+    page.innerHTML = `
+      <article class="wcard">
+        <div class="weave" aria-hidden="true"></div>
+        <div class="wbody">
+          <p class="for">${info.t ? `أنت توصف لـ <b>${esc(info.t)}</b>` : "أنت الواصف"}</p>
+          <h1 class="the-word">${esc(info.w)}</h1>
+          ${info.f.length ? `<p class="no-say">لا تقول</p><div class="chips">${info.f.map((x) => `<span>${esc(x)}</span>`).join("")}</div>` : ""}
+          <p class="rule">ولا تقول الكلمة نفسها أو أي جزء منها</p>
+          <button class="btn" id="ready">جاهز، ابدأ التايمر</button>
+          <p class="status" id="status" role="status"></p>
+        </div>
+      </article>`;
+
+    const btn = document.getElementById("ready");
+    const status = document.getElementById("status");
+
+    async function sendReady() {
+      btn.disabled = true; btn.textContent = "لحظة…";
+      status.className = "status"; status.textContent = "";
+      const slow = setTimeout(() => { status.textContent = "نصحّي السيرفر، ثواني…"; }, 3000);
+      const ctrl = new AbortController();
+      const cut = setTimeout(() => ctrl.abort(), 45000);
+      try {
+        if (!API) throw new Error("no api");
+        const r = await fetch(API + "/api/round/" + encodeURIComponent(info.r) + "/ready", { method: "POST", signal: ctrl.signal });
+        if (!r.ok) throw new Error(r.status);
+        btn.remove();
+        status.className = "status go";
+        status.textContent = "بدأ التايمر، وصّف الحين!";
+        if (navigator.vibrate) navigator.vibrate(120);
+      } catch {
+        btn.disabled = false; btn.textContent = "جرّب مرة ثانية";
+        status.className = "status err";
+        status.textContent = "ما وصلت للشاشة. خلّوا أحد يضغط «ابدأ التايمر» على الشاشة الكبيرة.";
+      } finally { clearTimeout(slow); clearTimeout(cut); }
+    }
+    btn.addEventListener("click", sendReady);
+
+    // نصحّي السيرفر من أول ما تنفتح الصفحة
+    if (API) fetch(API + "/api/health").catch(() => {});
+  })();
+  </script>
+</body>
+</html>
