@@ -9,18 +9,19 @@
    600
   ],
   "categoriesPerTeam": 3,
+  "tabooTime": 60,
+  "tabooStealTime": 30,
   "helpers": {
    "double": true,
    "call": true,
    "swap": true
-  },
-  "tabooTime": 60,
-  "tabooStealTime": 30
+  }
  },
  "categories": [
   {
    "id": "kuwait",
    "name": "الكويت",
+   "type": "qa",
    "enabled": true,
    "questions": [
     {
@@ -95,12 +96,12 @@
      "q": "كم سوراً بُني حول مدينة الكويت عبر تاريخها؟",
      "a": "ثلاثة أسوار"
     }
-   ],
-   "type": "qa"
+   ]
   },
   {
    "id": "geo",
    "name": "جغرافيا",
+   "type": "qa",
    "enabled": true,
    "questions": [
     {
@@ -175,12 +176,12 @@
      "q": "كم دولة تحد السعودية برياً؟",
      "a": "سبع دول: الأردن والعراق والكويت وقطر والإمارات وعُمان واليمن"
     }
-   ],
-   "type": "qa"
+   ]
   },
   {
    "id": "history",
    "name": "تاريخ",
+   "type": "qa",
    "enabled": true,
    "questions": [
     {
@@ -255,12 +256,12 @@
      "q": "من هو مؤسس الدولة الأموية؟",
      "a": "معاوية بن أبي سفيان"
     }
-   ],
-   "type": "qa"
+   ]
   },
   {
    "id": "sports",
    "name": "رياضة",
+   "type": "qa",
    "enabled": true,
    "questions": [
     {
@@ -335,12 +336,12 @@
      "q": "كم شوطاً كحد أقصى في مباراة الكرة الطائرة؟",
      "a": "خمسة أشواط"
     }
-   ],
-   "type": "qa"
+   ]
   },
   {
    "id": "science",
    "name": "علوم",
+   "type": "qa",
    "enabled": true,
    "questions": [
     {
@@ -415,12 +416,12 @@
      "q": "من صاحب النظرية النسبية؟",
      "a": "ألبرت أينشتاين"
     }
-   ],
-   "type": "qa"
+   ]
   },
   {
    "id": "islam",
    "name": "إسلاميات",
+   "type": "qa",
    "enabled": true,
    "questions": [
     {
@@ -495,12 +496,12 @@
      "q": "في أي سنة هجرية كانت غزوة بدر؟",
      "a": "السنة الثانية للهجرة"
     }
-   ],
-   "type": "qa"
+   ]
   },
   {
    "id": "food",
    "name": "أكلات",
+   "type": "qa",
    "enabled": true,
    "questions": [
     {
@@ -575,12 +576,12 @@
      "q": "من أي دولة أصل جبن البارميزان؟",
      "a": "إيطاليا"
     }
-   ],
-   "type": "qa"
+   ]
   },
   {
    "id": "animals",
    "name": "حيوانات",
+   "type": "qa",
    "enabled": true,
    "questions": [
     {
@@ -655,12 +656,12 @@
      "q": "ماذا يسمى صغير الضفدع؟",
      "a": "الشرغوف"
     }
-   ],
-   "type": "qa"
+   ]
   },
   {
    "id": "arabic",
    "name": "لغة وأمثال",
+   "type": "qa",
    "enabled": true,
    "questions": [
     {
@@ -735,12 +736,12 @@
      "q": "ما اسم العلم الذي يدرس أوزان الشعر العربي؟",
      "a": "علم العروض"
     }
-   ],
-   "type": "qa"
+   ]
   },
   {
    "id": "riddles",
    "name": "ألغاز",
+   "type": "qa",
    "enabled": true,
    "questions": [
     {
@@ -815,12 +816,12 @@
      "q": "ما الرقم الذي إذا ضربته في أي رقم كان الناتج صفراً؟",
      "a": "الصفر"
     }
-   ],
-   "type": "qa"
+   ]
   },
   {
    "id": "tech",
    "name": "تقنية واختراعات",
+   "type": "qa",
    "enabled": true,
    "questions": [
     {
@@ -895,12 +896,12 @@
      "q": "كم بت في البايت الواحد؟",
      "a": "8 بت"
     }
-   ],
-   "type": "qa"
+   ]
   },
   {
    "id": "numbers",
    "name": "أرقام",
+   "type": "qa",
    "enabled": true,
    "questions": [
     {
@@ -975,8 +976,7 @@
      "q": "كم مجموع زوايا المثلث؟",
      "a": "180 درجة"
     }
-   ],
-   "type": "qa"
+   ]
   },
   {
    "id": "la-taqool",
@@ -1060,7 +1060,7 @@
   },
   {
    "id": "bidoon-kilma",
-   "name": "بدون كلمة",
+   "name": "ولا كلمة",
    "type": "charades",
    "enabled": true,
    "questions": [
