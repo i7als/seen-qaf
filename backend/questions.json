@@ -980,7 +980,7 @@
   },
   {
    "id": "la-taqool",
-   "name": "لا تقول",
+   "name": "لا تقول الكلمة الممنوعة",
    "type": "taboo",
    "enabled": true,
    "questions": [
